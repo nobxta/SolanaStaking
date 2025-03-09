@@ -23,6 +23,7 @@ import Withdraw from "./page/Withdraw";
 import Profile from "./page/Profile";
 import Referrals from "./page/Referrals";
 import InvestmentCalculator from "./page/InvestmentCalculator";
+import PaymentDetails from "./page/PaymentDetails";
 
 export default function App() {
   return (
@@ -30,8 +31,7 @@ export default function App() {
       <Router>
         <Toaster /> {/* Global toast notifications */}
         <Routes>
-
-          {/* ✅ OTP Verification Route (Fixed) */}
+          {/* ✅ OTP Verification Route */}
           <Route path="/verify-otp" element={<OtpVerification />} />
 
           {/* ✅ Public Routes (Navbar + Footer) */}
@@ -69,8 +69,9 @@ export default function App() {
             { path: "/wallet", component: <Wallet /> },
             { path: "/deposit", component: <Deposit /> },
             { path: "/withdraw", component: <Withdraw /> },
+            { path: "/payment-details", component: <PaymentDetails /> },
             { path: "/profile", component: <Profile /> },
-            { path: "/Referrals", component: <Referrals /> },
+            { path: "/referrals", component: <Referrals /> },
           ].map(({ path, component }, index) => (
             <Route
               key={index}
@@ -86,7 +87,7 @@ export default function App() {
             />
           ))}
 
-          {/* ✅ Protected Solana Wallet Route */}
+          {/* ✅ Fixed: Protected Solana Wallet Route */}
           <Route
             path="/wallets"
             element={
@@ -95,7 +96,6 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-
         </Routes>
       </Router>
     </div>
