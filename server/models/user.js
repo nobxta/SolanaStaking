@@ -14,6 +14,14 @@ const UserSchema = new mongoose.Schema(
     otp: { type: String, select: true }, // Allow OTP to be retrieved
     otpExpires: { type: Date, select: true }, // Allow expiry time to be retrieved
     isVerified: { type: Boolean, default: false }, // Verification status
+    resetPasswordOTP: {
+      type: String,
+      select: false,
+    },
+    resetPasswordExpires: {
+      type: Date,
+      select: false,
+    },
   },
   { timestamps: true }
 );

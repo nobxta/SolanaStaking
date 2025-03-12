@@ -14,12 +14,24 @@ const Dashboard = () => {
     apy: 7.2,
   });
   const [recentDeposit, setRecentDeposit] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Your wallet address - must be the same as in PaymentDetails
+  const walletAddress = "sol1q6z48xpqFDsD9jKEWzHmqQm5XYG7pzJr8xpq";
 
   useEffect(() => {
-    fetchSolanaPrice();
-    fetchWalletBalance();
-    fetchTransactions();
-    checkRecentDeposit();
+    setIsLoading(true);
+    Promise.all([fetchSolanaPrice(), fetchWalletBalance(), fetchTransactions()])
+      .then(() => {
+        checkRecentDeposit();
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        console.error("Error loading dashboard data:", err);
+        setError("Failed to load dashboard data. Please refresh the page.");
+        setIsLoading(false);
+      });
   }, []);
 
   const fetchSolanaPrice = async () => {
@@ -27,12 +39,17 @@ const Dashboard = () => {
       const response = await fetch(
         "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd"
       );
+      if (!response.ok) {
+        throw new Error("Failed to fetch Solana price");
+      }
       const data = await response.json();
       setSolanaPrice(data.solana.usd);
+      return data.solana.usd;
     } catch (error) {
       console.error("Error fetching Solana price:", error);
       // Fallback price in case API fails
       setSolanaPrice(100);
+      return 100;
     }
   };
 
@@ -45,104 +62,139 @@ const Dashboard = () => {
           jsonrpc: "2.0",
           id: 1,
           method: "getBalance",
-          params: ["ENqqKBZQks2mchfQCKwhCadtG8atMUedCMdSywPZuCJR"],
+          params: [walletAddress],
         }),
       });
-      const data = await response.json();
 
-      // Get balance from API
-      let balance = data.result.value / 1e9;
-
-      // If there's a recent deposit, add it to the balance
-      const depositAmount = localStorage.getItem("depositAmount");
-      if (depositAmount && !isNaN(parseFloat(depositAmount))) {
-        balance += parseFloat(depositAmount);
+      if (!response.ok) {
+        throw new Error("Failed to fetch wallet balance");
       }
 
+      const data = await response.json();
+
+      if (data.error) {
+        throw new Error(data.error.message || "Error fetching balance");
+      }
+
+      // Get balance from API (convert from lamports to SOL)
+      let balance = data.result?.value / 1e9 || 0;
       setWalletBalance(balance);
+      return balance;
     } catch (error) {
       console.error("Error fetching wallet balance:", error);
+      setError(
+        "Could not fetch wallet balance. Using cached data if available."
+      );
 
-      // Fallback balance + recent deposit for demo
-      const depositAmount = localStorage.getItem("depositAmount");
-      setWalletBalance(5000 + (depositAmount ? parseFloat(depositAmount) : 0));
+      // Try to get the last known balance from localStorage
+      const lastKnownBalance = localStorage.getItem("lastKnownBalance");
+      if (lastKnownBalance && !isNaN(parseFloat(lastKnownBalance))) {
+        setWalletBalance(parseFloat(lastKnownBalance));
+        return parseFloat(lastKnownBalance);
+      }
+
+      // Fall back to zero if no cached balance
+      setWalletBalance(0);
+      return 0;
     }
   };
 
   const fetchTransactions = async () => {
     try {
       const response = await fetch(
-        `https://api.solscan.io/account/transactions?address=ENqqKBZQks2mchfQCKwhCadtG8atMUedCMdSywPZuCJR`
+        `https://public-api.solscan.io/account/transactions?account=${walletAddress}&limit=5`
       );
-      const data = await response.json();
 
-      // Prepare transactions from API
-      let txList = data.data ? data.data.slice(0, 5) : [];
-
-      // Add recent deposit to transactions if available
-      const depositDetails = JSON.parse(
-        localStorage.getItem("depositDetails") || "null"
-      );
-      if (depositDetails) {
-        // Add the recent deposit to the top of transactions list
-        txList = [
-          {
-            txHash: depositDetails.txHash,
-            change: depositDetails.amount * 1e9, // Convert to lamports for consistency
-            timestamp: depositDetails.timestamp,
-            isRecent: true,
-          },
-          ...txList,
-        ].slice(0, 5); // Keep only 5 transactions
+      if (!response.ok) {
+        throw new Error(`Failed to fetch transactions: ${response.status}`);
       }
 
-      setTransactions(txList);
-    } catch (error) {
-      console.error("Error fetching transactions:", error);
+      const data = await response.json();
 
-      // Fallback transactions + recent deposit for demo
+      // Process real transaction data
+      let txList = Array.isArray(data) ? data.slice(0, 5) : [];
+
+      // Transform the transaction data to our format
+      const formattedTxs = txList.map((tx) => {
+        // Determine if this is a deposit or withdrawal
+        // This logic may need to be adjusted based on actual Solscan API response structure
+        const isDeposit =
+          tx.tokenTransfers?.some((t) => t.destination === walletAddress) ||
+          false;
+        const changeAmount =
+          tx.tokenTransfers?.reduce((total, t) => {
+            if (t.destination === walletAddress) {
+              return total + parseFloat(t.amount);
+            } else if (t.source === walletAddress) {
+              return total - parseFloat(t.amount);
+            }
+            return total;
+          }, 0) || 0;
+
+        return {
+          txHash: tx.txHash || tx.signature,
+          change: changeAmount * 1e9, // Convert to lamports for consistency
+          timestamp: tx.blockTime * 1000, // Convert to milliseconds
+          isRecent: false, // Will be updated later if this is a recent deposit
+        };
+      });
+
+      // Add recent deposit to transactions if available
       const depositDetails = JSON.parse(
         localStorage.getItem("depositDetails") || "null"
       );
 
-      // Create demo transactions
-      let demoTransactions = [
-        {
-          txHash: "7xHG53DFg23hJklM",
-          change: -0.5 * 1e9,
-          timestamp: Date.now() - 86400000 * 2,
-        },
-        {
-          txHash: "9jNM45PqR78sTuVw",
-          change: 2.3 * 1e9,
-          timestamp: Date.now() - 86400000 * 3,
-        },
-        {
-          txHash: "3zQw67LpK12xYbNm",
-          change: -1.2 * 1e9,
-          timestamp: Date.now() - 86400000 * 4,
-        },
-        {
-          txHash: "5aXc89BnM34jKlPq",
-          change: 0.8 * 1e9,
-          timestamp: Date.now() - 86400000 * 5,
-        },
-      ];
-
-      // Add recent deposit to transactions if available
       if (depositDetails) {
-        demoTransactions = [
+        // Check if this transaction is already in our list
+        const txExists = formattedTxs.some(
+          (tx) => tx.txHash === depositDetails.txHash
+        );
+
+        if (!txExists) {
+          // Add the recent deposit and mark it as recent
+          formattedTxs.unshift({
+            txHash: depositDetails.txHash,
+            change: depositDetails.amount * 1e9, // Convert to lamports
+            timestamp: depositDetails.timestamp,
+            isRecent: true,
+          });
+        } else {
+          // Mark the existing transaction as recent
+          const txIndex = formattedTxs.findIndex(
+            (tx) => tx.txHash === depositDetails.txHash
+          );
+          if (txIndex >= 0) {
+            formattedTxs[txIndex].isRecent = true;
+          }
+        }
+      }
+
+      // Keep only the most recent 5 transactions
+      setTransactions(formattedTxs.slice(0, 5));
+      return formattedTxs;
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+      setError("Could not fetch transactions. Using cached data if available.");
+
+      // Get recent deposit if available
+      const depositDetails = JSON.parse(
+        localStorage.getItem("depositDetails") || "null"
+      );
+
+      if (depositDetails) {
+        setTransactions([
           {
             txHash: depositDetails.txHash,
             change: depositDetails.amount * 1e9,
             timestamp: depositDetails.timestamp,
             isRecent: true,
           },
-          ...demoTransactions,
-        ].slice(0, 5);
+        ]);
+        return [depositDetails];
       }
 
-      setTransactions(demoTransactions);
+      setTransactions([]);
+      return [];
     }
   };
 
@@ -155,12 +207,21 @@ const Dashboard = () => {
     );
 
     if (depositAmount && depositDetails) {
-      setRecentDeposit({
-        amount: parseFloat(depositAmount),
-        usdValue: depositUsdValue,
-        timestamp: depositDetails.timestamp,
-        txHash: depositDetails.txHash,
-      });
+      // Check if the deposit was made in the last 24 hours
+      const depositTime = depositDetails.timestamp;
+      const isRecent = Date.now() - depositTime < 24 * 60 * 60 * 1000;
+
+      if (isRecent) {
+        setRecentDeposit({
+          amount: parseFloat(depositAmount),
+          usdValue: depositUsdValue,
+          timestamp: depositDetails.timestamp,
+          txHash: depositDetails.txHash,
+        });
+      } else {
+        // Clear old deposit data
+        setRecentDeposit(null);
+      }
     }
   };
 
@@ -178,12 +239,29 @@ const Dashboard = () => {
     return `${Math.floor(seconds / 86400)} days ago`;
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-white text-gray-900 p-8 flex justify-center items-center">
+        <div className="text-center">
+          <p className="text-lg font-medium">Loading dashboard data...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white text-gray-900 p-8">
       <div className="max-w-7xl mx-auto">
         <h2 className="text-3xl font-extrabold text-black mb-6">
           Solana Dashboard
         </h2>
+
+        {error && (
+          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6 rounded">
+            <p className="font-bold">Notice</p>
+            <p>{error}</p>
+          </div>
+        )}
 
         {/* Recent Deposit Alert */}
         {recentDeposit && (

@@ -12,6 +12,7 @@ import Footer from "./components/Footer";
 import SolanaWallet from "./components/SolanaWallet";
 import Auth from "./components/Auth";
 import OtpVerification from "./components/OtpVerification";
+import ForgotPassword from "./components/ForgotPassword"; // Import ForgotPassword component
 import ProtectedRoute from "./components/ProtectedRoute";
 import Sidebar from "./page/Sidebar"; // Import Sidebar
 
@@ -33,6 +34,18 @@ export default function App() {
         <Routes>
           {/* ✅ OTP Verification Route */}
           <Route path="/verify-otp" element={<OtpVerification />} />
+
+          {/* ✅ Forgot Password Route */}
+          <Route
+            path="/forgot-password"
+            element={
+              <>
+                <Navbar />
+                <ForgotPassword />
+                <Footer />
+              </>
+            }
+          />
 
           {/* ✅ Public Routes (Navbar + Footer) */}
           <Route

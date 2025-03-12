@@ -11,7 +11,7 @@ const PaymentDetails = () => {
   const [transactionStatus, setTransactionStatus] = useState("waiting"); // waiting, pending, confirmed
   const [transactionDetails, setTransactionDetails] = useState(null);
 
-  // Your wallet address
+  // Your wallet address - replace with your actual wallet address
   const walletAddress = "sol1q6z48xpqFDsD9jKEWzHmqQm5XYG7pzJr8xpq";
 
   useEffect(() => {
@@ -44,62 +44,73 @@ const PaymentDetails = () => {
 
   const checkTransaction = async (address, amount) => {
     try {
-      // This is where you would call the Solscan API
-      // For demo purposes, we're simulating a response
-      // In production, replace with actual API call:
-
-      /* 
+      // Real Solscan API call to check for transactions
       const response = await fetch(
         `https://public-api.solscan.io/account/transactions?account=${address}&limit=10`,
         {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            // Add your API key if required
-          }
+            // Add your API key if required for Solscan
+          },
         }
       );
-      
-      const data = await response.json();
-      const recentTx = data.find(tx => 
-        tx.tokenTransfers && 
-        tx.tokenTransfers.some(transfer => 
-          transfer.amount === parseFloat(amount) && 
-          transfer.destination === address
-        )
-      );
-      
-      if (recentTx) {
-        setTransactionStatus("confirmed");
-        setTransactionDetails(recentTx);
+
+      if (!response.ok) {
+        throw new Error(`API request failed with status ${response.status}`);
       }
-      */
 
-      // Simulation for demo:
-      if (Math.random() > 0.7) {
-        setTransactionStatus("pending");
+      const data = await response.json();
 
-        // Simulate confirmation after 5 seconds
-        setTimeout(() => {
-          const txDetails = {
-            txHash:
-              "4xzGRGEzdAVp6gzfuQwuABVrfQVkmZyYAV3Lja5mzxzAJrzTVkBx7xbVBU6TDcft",
-            slot: 153726384,
-            blockTime: Date.now() / 1000,
-            fee: 0.000005,
-            amount: parseFloat(amount),
-            timestamp: Date.now(),
-          };
+      // Find a transaction that matches our expected amount
+      // Note: You may need to adjust this logic based on the actual Solscan API response structure
+      const recentTx = data.find(
+        (tx) =>
+          tx.tokenTransfers &&
+          tx.tokenTransfers.some((transfer) => {
+            const transferAmount = parseFloat(transfer.amount);
+            const expectedAmount = parseFloat(amount);
+            // Check if amounts match (can include a small tolerance for dust)
+            return (
+              Math.abs(transferAmount - expectedAmount) < 0.001 &&
+              transfer.destination === address
+            );
+          })
+      );
 
-          // Store transaction details in localStorage for dashboard
-          localStorage.setItem("depositDetails", JSON.stringify(txDetails));
+      if (recentTx) {
+        // Found matching transaction
+        if (transactionStatus !== "confirmed") {
+          // First set to pending if not already confirmed
+          if (transactionStatus !== "pending") {
+            setTransactionStatus("pending");
+          }
 
-          setTransactionStatus("confirmed");
-          setTransactionDetails(txDetails);
-        }, 5000);
+          // Check confirmation status
+          const confirmations = recentTx.confirmations || 0;
+
+          // Consider confirmed after sufficient confirmations (e.g., 32 for Solana)
+          if (confirmations >= 32) {
+            const txDetails = {
+              txHash: recentTx.txHash || recentTx.signature,
+              slot: recentTx.slot,
+              blockTime: recentTx.blockTime,
+              fee: recentTx.fee / 1e9, // Convert lamports to SOL
+              amount: parseFloat(amount),
+              timestamp: recentTx.blockTime * 1000, // Convert to milliseconds
+            };
+
+            // Store transaction details in localStorage for dashboard
+            localStorage.setItem("depositDetails", JSON.stringify(txDetails));
+
+            setTransactionStatus("confirmed");
+            setTransactionDetails(txDetails);
+          }
+        }
       }
     } catch (error) {
       console.error("Error checking transaction:", error);
+      // Don't change status on error, just log and continue checking
     }
   };
 
