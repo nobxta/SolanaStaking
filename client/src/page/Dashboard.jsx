@@ -34,6 +34,38 @@ const Dashboard = () => {
       });
   }, []);
 
+  // Replace the hardcoded stakingData with this code in your Dashboard component
+  useEffect(() => {
+    // Check localStorage for staking data
+    const storedStakingData = JSON.parse(
+      localStorage.getItem("stakingData") || "null"
+    );
+
+    if (storedStakingData) {
+      // Calculate days left based on start date and duration
+      const startDate = new Date(storedStakingData.startDate);
+      const currentDate = new Date();
+      const daysPassed = Math.floor(
+        (currentDate - startDate) / (1000 * 60 * 60 * 24)
+      );
+      const daysLeft = Math.max(0, storedStakingData.duration - daysPassed);
+
+      setStakingData({
+        amount: storedStakingData.amount,
+        duration: storedStakingData.duration,
+        daysLeft: daysLeft,
+        apy: storedStakingData.apy,
+      });
+    } else {
+      // Set default values if no staking data is found
+      setStakingData({
+        amount: 0,
+        duration: 0,
+        daysLeft: 0,
+        apy: 0,
+      });
+    }
+  }, []);
   const fetchSolanaPrice = async () => {
     try {
       const response = await fetch(

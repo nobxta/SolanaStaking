@@ -1,37 +1,16 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { useDispatch } from "react-redux";
-import { removeUser } from "../redux/userSlice";
+import { removeUser } from "../redux/userSlice"; // Adjust path as needed
 import { useNavigate, useLocation } from "react-router-dom";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 
-const Sidebar = ({ setContentMargin }) => {
+const Sidebar = ({ isOpen = true, toggleSidebar }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
-  const [isOpen, setIsOpen] = useState(true);
 
   // Set active menu item based on current route
-  const [activeItem, setActiveItem] = useState("/dashboard");
-
-  useEffect(() => {
-    setActiveItem(location.pathname);
-  }, [location]);
-
-  // Handle window resize for responsive behavior
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 768) {
-        setIsOpen(false);
-        setContentMargin("ml-16");
-      }
-    };
-
-    // Set initial state based on screen size
-    handleResize();
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, [setContentMargin]);
+  const activeItem = location.pathname;
 
   const handleLogout = async () => {
     try {
@@ -58,11 +37,6 @@ const Sidebar = ({ setContentMargin }) => {
     }
   };
 
-  const toggleSidebar = () => {
-    setIsOpen(!isOpen);
-    setContentMargin(isOpen ? "ml-16" : "ml-64");
-  };
-
   const menuItems = [
     { name: "Dashboard", href: "/dashboard", icon: "fas fa-chart-line" },
     { name: "Staking", href: "/calculator", icon: "fas fa-coins" },
@@ -71,14 +45,14 @@ const Sidebar = ({ setContentMargin }) => {
     { name: "Withdraw", href: "/withdraw", icon: "fas fa-arrow-up" },
     { name: "Profile", href: "/profile", icon: "fas fa-user" },
     { name: "Support", href: "/supportsection", icon: "fas fa-life-ring" },
-    { name: "Referrals", href: "/referral", icon: "fas fa-users" },
+    { name: "Referrals", href: "/referrals", icon: "fas fa-users" },
   ];
 
   return (
     <nav
-      className={`h-screen ${
+      className={`fixed inset-y-0 left-0 ${
         isOpen ? "w-64" : "w-16"
-      } bg-gradient-to-b from-[#18283b] to-[#0f172a] text-white flex flex-col shadow-xl fixed top-0 left-0 z-50 overflow-hidden transition-all duration-300`}
+      } bg-gradient-to-b from-[#18283b] to-[#0f172a] text-white flex flex-col shadow-xl z-50 transition-all duration-300`}
     >
       {/* Sidebar Header */}
       <div className="p-6 border-b border-opacity-20 border-[#9945FF] flex justify-between items-center">
@@ -111,7 +85,7 @@ const Sidebar = ({ setContentMargin }) => {
       </div>
 
       {/* Sidebar Menu */}
-      <div className="flex-1 py-4 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-[#2c3e50] scrollbar-track-transparent">
+      <div className="flex-grow py-4 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-[#2c3e50] scrollbar-track-transparent">
         {menuItems.map((item) => (
           <button
             key={item.name}
@@ -138,7 +112,7 @@ const Sidebar = ({ setContentMargin }) => {
         ))}
       </div>
 
-      {/* Solana Stats - Only visible when sidebar is open */}
+      {/* SOL Stats */}
       {isOpen && (
         <div className="px-4 py-3 bg-[#0c1522] bg-opacity-60 mx-2 rounded-lg mb-2">
           <h4 className="text-xs text-gray-400 mb-2">SOL STATS</h4>
@@ -156,7 +130,7 @@ const Sidebar = ({ setContentMargin }) => {
       )}
 
       {/* Logout Button */}
-      <div className="p-4 border-t border-opacity-20 border-[#9945FF]">
+      <div className="p-4 border-t border-opacity-20 border-[#9945FF] mt-auto">
         <button
           onClick={handleLogout}
           className={`w-full flex items-center justify-center ${

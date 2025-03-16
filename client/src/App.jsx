@@ -12,9 +12,9 @@ import Footer from "./components/Footer";
 import SolanaWallet from "./components/SolanaWallet";
 import Auth from "./components/Auth";
 import OtpVerification from "./components/OtpVerification";
-import ForgotPassword from "./components/ForgotPassword"; // Import ForgotPassword component
+import ForgotPassword from "./components/ForgotPassword";
 import ProtectedRoute from "./components/ProtectedRoute";
-import Sidebar from "./page/Sidebar"; // Import Sidebar
+import Layout from "./page/Layout"; // Import Layout component
 
 import Home from "./page/Home";
 import Dashboard from "./page/Dashboard";
@@ -26,6 +26,18 @@ import Referrals from "./page/Referrals";
 import InvestmentCalculator from "./page/InvestmentCalculator";
 import PaymentDetails from "./page/PaymentDetails";
 import Support from "./page/Suppor";
+import { Outlet } from "react-router-dom";
+
+// Public Layout component
+const PublicLayout = () => {
+  return (
+    <>
+      <Navbar />
+      <Outlet />
+      <Footer />
+    </>
+  );
+};
 
 export default function App() {
   return (
@@ -36,71 +48,39 @@ export default function App() {
           {/* ✅ OTP Verification Route */}
           <Route path="/verify-otp" element={<OtpVerification />} />
 
-          {/* ✅ Forgot Password Route */}
-          <Route
-            path="/forgot-password"
-            element={
-              <>
-                <Navbar />
-                <ForgotPassword />
-                <Footer />
-              </>
-            }
-          />
+          {/* ✅ Public Routes with Layout */}
+          <Route element={<PublicLayout />}>
+            <Route path="/" element={<Hero />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+          </Route>
 
-          {/* ✅ Public Routes (Navbar + Footer) */}
-          <Route
-            path="/"
-            element={
-              <>
-                <Navbar />
-                <Hero />
-                <Footer />
-              </>
-            }
-          />
-          <Route
-            path="/auth"
-            element={
-              <>
-                <Navbar />
-                <Auth />
-                <Footer />
-              </>
-            }
-          />
+          {/* Individual components without layout */}
           <Route path="/livestats" element={<LiveStats />} />
           <Route path="/staking" element={<StakingFeatures />} />
           <Route path="/security" element={<SecurityMeasures />} />
           <Route path="/guide" element={<UserGuide />} />
           <Route path="/support" element={<SupportSection />} />
 
-          {/* ✅ Protected Routes (Sidebar + Dashboard) */}
-          {[
-            { path: "/home", component: <Home /> },
-            { path: "/dashboard", component: <Dashboard /> },
-            { path: "/calculator", component: <InvestmentCalculator /> },
-            { path: "/wallet", component: <Wallet /> },
-            { path: "/deposit", component: <Deposit /> },
-            { path: "/withdraw", component: <Withdraw /> },
-            { path: "/payment-details", component: <PaymentDetails /> },
-            { path: "/profile", component: <Profile /> },
-            { path: "/referrals", component: <Referrals /> },
-            { path: "/supportsection", component: <Support /> },
-          ].map(({ path, component }, index) => (
-            <Route
-              key={index}
-              path={path}
-              element={
-                <ProtectedRoute>
-                  <div className="flex min-h-screen">
-                    <Sidebar />
-                    <div className="flex-grow p-6">{component}</div>
-                  </div>
-                </ProtectedRoute>
-              }
-            />
-          ))}
+          {/* ✅ Protected Dashboard Routes with Layout */}
+          <Route
+            element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="/home" element={<Home />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/calculator" element={<InvestmentCalculator />} />
+            <Route path="/wallet" element={<Wallet />} />
+            <Route path="/deposit" element={<Deposit />} />
+            <Route path="/withdraw" element={<Withdraw />} />
+            <Route path="/payment-details" element={<PaymentDetails />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/referrals" element={<Referrals />} />
+            <Route path="/supportsection" element={<Support />} />
+          </Route>
 
           {/* ✅ Fixed: Protected Solana Wallet Route */}
           <Route
