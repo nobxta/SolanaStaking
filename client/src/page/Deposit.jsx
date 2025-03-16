@@ -150,6 +150,7 @@ const Deposit = () => {
         usdValue: parseFloat(usdValue),
         timestamp: Date.now(),
         txHash: txHash,
+        status: "pending", // Add status to track payment progress
       })
     );
 

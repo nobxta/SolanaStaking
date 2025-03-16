@@ -25,6 +25,7 @@ import Profile from "./page/Profile";
 import Referrals from "./page/Referrals";
 import InvestmentCalculator from "./page/InvestmentCalculator";
 import PaymentDetails from "./page/PaymentDetails";
+import Support from "./page/Suppor";
 
 export default function App() {
   return (
@@ -85,6 +86,7 @@ export default function App() {
             { path: "/payment-details", component: <PaymentDetails /> },
             { path: "/profile", component: <Profile /> },
             { path: "/referrals", component: <Referrals /> },
+            { path: "/supportsection", component: <Support /> },
           ].map(({ path, component }, index) => (
             <Route
               key={index}

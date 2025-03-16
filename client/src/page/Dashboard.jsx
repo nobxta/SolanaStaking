@@ -144,7 +144,7 @@ const Dashboard = () => {
         localStorage.getItem("depositDetails") || "null"
       );
 
-      if (depositDetails) {
+      if (depositDetails && depositDetails.status === "confirmed") {
         // Check if this transaction is already in our list
         const txExists = formattedTxs.some(
           (tx) => tx.txHash === depositDetails.txHash
@@ -181,7 +181,7 @@ const Dashboard = () => {
         localStorage.getItem("depositDetails") || "null"
       );
 
-      if (depositDetails) {
+      if (depositDetails && depositDetails.status === "confirmed") {
         setTransactions([
           {
             txHash: depositDetails.txHash,
@@ -200,21 +200,19 @@ const Dashboard = () => {
 
   const checkRecentDeposit = () => {
     // Check if there's a recent deposit in localStorage
-    const depositAmount = localStorage.getItem("depositAmount");
-    const depositUsdValue = localStorage.getItem("depositUsdValue");
     const depositDetails = JSON.parse(
       localStorage.getItem("depositDetails") || "null"
     );
 
-    if (depositAmount && depositDetails) {
+    if (depositDetails && depositDetails.status === "confirmed") {
       // Check if the deposit was made in the last 24 hours
       const depositTime = depositDetails.timestamp;
       const isRecent = Date.now() - depositTime < 24 * 60 * 60 * 1000;
 
       if (isRecent) {
         setRecentDeposit({
-          amount: parseFloat(depositAmount),
-          usdValue: depositUsdValue,
+          amount: depositDetails.amount,
+          usdValue: depositDetails.usdValue,
           timestamp: depositDetails.timestamp,
           txHash: depositDetails.txHash,
         });
@@ -222,6 +220,9 @@ const Dashboard = () => {
         // Clear old deposit data
         setRecentDeposit(null);
       }
+    } else {
+      // Clear deposit data if status is not confirmed
+      setRecentDeposit(null);
     }
   };
 

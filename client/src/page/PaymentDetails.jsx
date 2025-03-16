@@ -44,14 +44,12 @@ const PaymentDetails = () => {
 
   const checkTransaction = async (address, amount) => {
     try {
-      // Real Solscan API call to check for transactions
       const response = await fetch(
         `https://public-api.solscan.io/account/transactions?account=${address}&limit=10`,
         {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            // Add your API key if required for Solscan
           },
         }
       );
@@ -62,15 +60,12 @@ const PaymentDetails = () => {
 
       const data = await response.json();
 
-      // Find a transaction that matches our expected amount
-      // Note: You may need to adjust this logic based on the actual Solscan API response structure
       const recentTx = data.find(
         (tx) =>
           tx.tokenTransfers &&
           tx.tokenTransfers.some((transfer) => {
             const transferAmount = parseFloat(transfer.amount);
             const expectedAmount = parseFloat(amount);
-            // Check if amounts match (can include a small tolerance for dust)
             return (
               Math.abs(transferAmount - expectedAmount) < 0.001 &&
               transfer.destination === address
@@ -79,29 +74,32 @@ const PaymentDetails = () => {
       );
 
       if (recentTx) {
-        // Found matching transaction
         if (transactionStatus !== "confirmed") {
-          // First set to pending if not already confirmed
           if (transactionStatus !== "pending") {
             setTransactionStatus("pending");
           }
 
-          // Check confirmation status
           const confirmations = recentTx.confirmations || 0;
 
-          // Consider confirmed after sufficient confirmations (e.g., 32 for Solana)
           if (confirmations >= 32) {
             const txDetails = {
               txHash: recentTx.txHash || recentTx.signature,
               slot: recentTx.slot,
               blockTime: recentTx.blockTime,
-              fee: recentTx.fee / 1e9, // Convert lamports to SOL
+              fee: recentTx.fee / 1e9,
               amount: parseFloat(amount),
-              timestamp: recentTx.blockTime * 1000, // Convert to milliseconds
+              timestamp: recentTx.blockTime * 1000,
             };
 
-            // Store transaction details in localStorage for dashboard
-            localStorage.setItem("depositDetails", JSON.stringify(txDetails));
+            // Update deposit status to confirmed
+            const depositDetails = JSON.parse(
+              localStorage.getItem("depositDetails") || "{}"
+            );
+            depositDetails.status = "confirmed";
+            localStorage.setItem(
+              "depositDetails",
+              JSON.stringify(depositDetails)
+            );
 
             setTransactionStatus("confirmed");
             setTransactionDetails(txDetails);
@@ -110,8 +108,17 @@ const PaymentDetails = () => {
       }
     } catch (error) {
       console.error("Error checking transaction:", error);
-      // Don't change status on error, just log and continue checking
     }
+  };
+
+  const handleCancel = () => {
+    // Clear deposit details from localStorage
+    localStorage.removeItem("depositAmount");
+    localStorage.removeItem("depositUsdValue");
+    localStorage.removeItem("depositDetails");
+
+    // Navigate back to deposit page
+    navigate("/deposit");
   };
 
   return (
