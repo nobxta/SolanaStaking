@@ -41,7 +41,7 @@ async function sendOTP(email, otp) {
           <h2 style="color: #222;">Verify Your StakeSol Account</h2>
           <p style="color: #555;">Your OTP is valid for 10 minutes.</p>
           <div class="otp">${otp}</div>
-          <p style="color: #777;">If you didn’t request this, ignore this email.</p>
+          <p style="color: #777;">If you didn't request this, ignore this email.</p>
         </div>
       </body>
       </html>
@@ -49,7 +49,7 @@ async function sendOTP(email, otp) {
   });
 }
 
-// User Registration
+// User Pre-Registration - Only collect info and send OTP
 exports.register = async (req, res) => {
   try {
     const { name, email, password, confirmPassword } = req.body;
@@ -58,39 +58,67 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: "Passwords do not match" });
     }
 
-    let user = await User.findOne({ email });
-    if (user) {
+    // Check if user already exists
+    let existingUser = await User.findOne({ email });
+    if (existingUser && existingUser.isVerified) {
       return res.status(400).json({ message: "User already exists." });
     }
 
+    // If a pending verification exists, update it instead of creating new
+    if (existingUser && !existingUser.isVerified) {
+      // Update the existing unverified user with new information
+      const otp = generateOTP();
+      const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+
+      existingUser.name = name;
+      existingUser.password = hashedPassword;
+      existingUser.otp = otp;
+      existingUser.otpExpires = otpExpires;
+
+      await existingUser.save();
+      await sendOTP(email, otp);
+
+      return res.status(200).json({
+        message: "OTP sent to email. Verify to complete registration.",
+        email: email,
+      });
+    }
+
+    // For new users, store their info in temporary pre-registration
     const otp = generateOTP();
     const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
 
-    // 🔥 **Fix: Hash password before saving**
+    // Hash password before saving
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    user = new User({
+    // Create a new user with isVerified = false
+    const newUser = new User({
       name,
       email,
-      password: hashedPassword, // Store hashed password
+      password: hashedPassword,
       otp,
       otpExpires,
       isVerified: false,
     });
 
-    await user.save();
+    await newUser.save();
     await sendOTP(email, otp);
 
-    return res
-      .status(201)
-      .json({ message: "OTP sent to email. Verify to proceed." });
+    return res.status(201).json({
+      message: "OTP sent to email. Verify to complete registration.",
+      email: email,
+    });
   } catch (error) {
+    console.error("❌ Registration Error:", error);
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
 
-// Verify OTP
+// Verify OTP and complete registration
 exports.verifyOTP = async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -127,7 +155,19 @@ exports.verifyOTP = async (req, res) => {
     user.otpExpires = null;
     await user.save();
 
-    return res.status(200).json({ message: "Account verified successfully" });
+    // Generate token for automatic login after verification
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
+    return res.status(200).json({
+      message: "Account verified successfully",
+      token,
+      user: {
+        name: user.name,
+        email: user.email,
+      },
+    });
   } catch (error) {
     console.error("❌ Error in verifyOTP:", error);
     res.status(500).json({ message: "Server Error", error: error.message });
@@ -178,7 +218,14 @@ exports.login = async (req, res) => {
       expiresIn: "7d",
     });
 
-    return res.json({ token, message: "Login successful" });
+    return res.json({
+      token,
+      message: "Login successful",
+      user: {
+        name: user.name,
+        email: user.email,
+      },
+    });
   } catch (error) {
     console.error("❌ Login Error:", error);
     res.status(500).json({ message: "Server Error", error: error.message });
