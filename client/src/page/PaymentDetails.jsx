@@ -12,7 +12,7 @@ const PaymentDetails = () => {
   const [transactionDetails, setTransactionDetails] = useState(null);
 
   // Your wallet address - replace with your actual wallet address
-  const walletAddress = "sol1q6z48xpqFDsD9jKEWzHmqQm5XYG7pzJr8xpq";
+  const walletAddress = "ENqqKBZQks2mchfQCKwhCadtG8atMUedCMdSywPZuCJR";
 
   useEffect(() => {
     // Get stored amount from previous page

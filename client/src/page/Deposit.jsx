@@ -14,7 +14,7 @@ const Deposit = () => {
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
   // Your wallet address
-  const walletAddress = "sol1q6z48xpqFDsD9jKEWzHmqQm5XYG7pzJr8xpq";
+  const walletAddress = "ENqqKBZQks2mchfQCKwhCadtG8atMUedCMdSywPZuCJR";
 
   const transactions = [
     { id: 1, status: "Pending", amount: "250 SOL", time: "2h ago" },

